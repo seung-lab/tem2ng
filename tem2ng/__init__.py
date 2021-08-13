@@ -1,10 +1,10 @@
-from concurrent.futures import ProcessPoolExecutor
 import re
 import os
 
 import click
 import cv2
 import numpy as np
+import pathos.pools
 from tqdm import tqdm
 import tinybrain
 
@@ -121,10 +121,12 @@ def upload(source, destination):
 		bbx = Bbox.from_filename(get_ng(filename))
 		vol[bbx] = img
 		touch(os.path.join(progress_dir, filename))
+		return 1
 
-	with ProcessPoolExecutor(max_workers=8) as executor:
-		for _ in tqdm(executor.imap(process, to_upload), total=len(to_upload)):
-			pass
+  with tqdm(desc="Upload", total=total) as pbar:
+    with pathos.pools.ProcessPool(parallel) as pool:
+      for num_inserted in pool.imap(process, to_upload):
+        pbar.update(num_inserted)
 
 
 

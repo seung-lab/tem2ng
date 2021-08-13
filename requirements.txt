@@ -4,3 +4,4 @@ cloud-volume
 tinybrain
 opencv-python
 tqdm
+pathos
