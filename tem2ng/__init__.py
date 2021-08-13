@@ -91,12 +91,13 @@ def info(
 
 @main.command()
 @click.argument("source")
-def upload(source):
+@click.argument("destination")
+def upload(source, destination):
 	"""
 	Process a subtile directory and upload to
 	cloud storage.
 	"""
-	vol = CloudVolume("matrix://pni-tem1/test/")
+	vol = CloudVolume(destination)
 
 	for filename in os.scandir(source):
 		ext = os.path.splitext(filename)[1]
