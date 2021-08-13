@@ -108,6 +108,7 @@ def upload(source, destination):
 		if ext != ".bmp":
 			continue
 
+		filename = os.path.join(source, filename)
 		img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
 		while img.ndim < 4:
 			img = img[..., np.newaxis]
