@@ -20,10 +20,10 @@ def get_ng(tilename, z=0):
     
     column_size = 23 if t1 >= 288 else 24
 
-    x_map = {4:0,5:1,6:2,3:0,0:1,7:2,2:0,1:1,8:2}
-    get_x = lambda t1,t2: 6000 * ((t1%column_size)*3 + x_map[t2])
-    y_map = {4:0,3:1,2:2,5:0,0:1,1:2,6:0,7:1,8:2}
-    get_y = lambda t1,t2: 6000 * ((t1//column_size)*3 + y_map[t2])
+    x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
+    get_x = lambda t1,t2: 6000 * ((t1//column_size)*3 + x_map[t2])
+    y_map = {6:0,5:1,4:2,7:0,0:1,3:2,8:0,1:1,2:2}
+    get_y = lambda t1,t2: 6000 * ((h-1-t1%column_size)*3 + y_map[t2])
 
     x0 = get_x(t1, t2)
     xf = x0 + 6000
