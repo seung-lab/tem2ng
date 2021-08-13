@@ -120,7 +120,7 @@ def upload(source, destination):
 
 		bbx = Bbox.from_filename(get_ng(filename))
 		vol[bbx] = img
-		touch(os.path.join(progress_dir, filename)
+		touch(os.path.join(progress_dir, filename))
 
 	with ProcessPoolExecutor(max_workers=8) as executor:
 		for _ in tqdm(executor.imap(process, to_upload), total=len(to_upload)):
