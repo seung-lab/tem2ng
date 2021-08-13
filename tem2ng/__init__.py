@@ -99,7 +99,10 @@ def upload(source, destination):
 	"""
 	vol = CloudVolume(destination)
 
-	for filename in os.scandir(source):
+	for entry in os.scandir(source):
+		if not entry.is_file():
+			continue
+		filename = entry.name
 		ext = os.path.splitext(filename)[1]
 		if ext != ".bmp":
 			continue
