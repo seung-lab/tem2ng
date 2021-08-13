@@ -135,7 +135,8 @@ def upload(ctx, source, destination):
         return 1
 
     parallel = int(ctx.obj.get("parallel", 1))
-    with tqdm(desc="Upload", total=len(to_upload)) as pbar:
+
+    with tqdm(desc="Upload", total=len(all_files), initial=len(done_files)) as pbar:
         with pathos.pools.ProcessPool(parallel) as pool:
             for num_inserted in pool.imap(process, to_upload):
                 pbar.update(num_inserted)
