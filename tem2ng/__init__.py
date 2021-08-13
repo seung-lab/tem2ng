@@ -43,6 +43,10 @@ class Tuple3(click.ParamType):
 
 @click.group()
 def main():
+	"""
+	Upload tiles from a specific setup at PNI to
+	cloud storage.
+	"""
 	pass
 
 @main.command()
@@ -88,6 +92,10 @@ def info(
 @main.command()
 @click.argument("source")
 def upload(source):
+	"""
+	Process a subtile directory and upload to
+	cloud storage.
+	"""
 	vol = CloudVolume("matrix://pni-tem1/test/")
 
 	for filename in os.scandir(source):
