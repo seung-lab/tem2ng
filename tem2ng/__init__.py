@@ -1,5 +1,6 @@
 import re
 import os
+import multiprocessing as mp
 
 import click
 import cv2
@@ -46,12 +47,18 @@ class Tuple3(click.ParamType):
   
 
 @click.group()
-def main():
+@click.option("-p", "--parallel", default=1, help="Run with this number of parallel processes. If 0, use number of cores.")
+@click.pass_context
+def main(parallel):
     """
     Upload tiles from a specific setup at PNI to
     cloud storage.
     """
-    pass
+    parallel = int(parallel)
+    if parallel == 0:
+        parallel = mp.cpu_count()
+    ctx.ensure_object(dict)
+    ctx.obj["parallel"] = max(min(parallel, mp.cpu_count()), 1)
 
 @main.command()
 @click.option('--dataset-size', type=Tuple3(), default=None, required=True, help="Dimensions of the dataset in voxels.")
@@ -96,7 +103,8 @@ def info(
 @main.command()
 @click.argument("source")
 @click.argument("destination")
-def upload(source, destination):
+@click.pass_context
+def upload(ctx, source, destination):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -123,6 +131,7 @@ def upload(source, destination):
         touch(os.path.join(progress_dir, filename))
         return 1
 
+    parallel = int(ctx.obj.get("parallel", 1))
     with tqdm(desc="Upload", total=total) as pbar:
         with pathos.pools.ProcessPool(parallel) as pool:
             for num_inserted in pool.imap(process, to_upload):
