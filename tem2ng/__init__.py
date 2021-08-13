@@ -18,12 +18,12 @@ TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 def get_ng(tilename, z=0):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
     
-    column_size = 23 if t1 >= 288 else 24
+    col_height = 23 if t1 >= 288 else 24
 
     x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
-    get_x = lambda t1,t2: 6000 * ((t1//column_size)*3 + x_map[t2])
+    get_x = lambda t1,t2: 6000 * ((t1//col_height)*3 + x_map[t2])
     y_map = {6:0,5:1,4:2,7:0,0:1,3:2,8:0,1:1,2:2}
-    get_y = lambda t1,t2: 6000 * ((h-1-t1%column_size)*3 + y_map[t2])
+    get_y = lambda t1,t2: 6000 * ((col_height-1-t1%col_height)*3 + y_map[t2])
 
     x0 = get_x(t1, t2)
     xf = x0 + 6000
