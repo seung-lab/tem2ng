@@ -51,8 +51,13 @@ def main():
 @click.option('--chunk-size', type=Tuple3(), default="1024,1024,1", help="Chunk size of new layers.", show_default=True)
 @click.option('--resolution', type=Tuple3(), default="1,1,1", help="Resolution of a layer in nanometers.", show_default=True)
 @click.option('--bit-depth', type=int, default=8, help="Resolution of a layer in nanometers.", show_default=True)
+@click.option('--num-mips', type=int, default=1, help="Number of mip levels to generate at once.", show_default=True)
 @click.argument("cloudpath")
-def info(cloudpath, dataset_size, voxel_offset, chunk_size, resolution, bit_depth):
+def info(
+	cloudpath, 
+	dataset_size, voxel_offset, chunk_size, 
+	resolution, bit_depth, num_mips
+):
 	"""
 	Creates and uploads the neuroglancer info file.
 	This defines the size and properties of the image.
@@ -74,6 +79,10 @@ def info(cloudpath, dataset_size, voxel_offset, chunk_size, resolution, bit_dept
 	    volume_size     = dataset_size, # e.g. a cubic millimeter dataset
 	)
 	cv = CloudVolume(cloudpath, info=info)
+
+	for mip in range(1, num_mips):
+		cv.add_scale([2 ** mip, 2 ** mip, 1])
+
 	cv.commit_info()
 
 @main.command()
@@ -85,7 +94,7 @@ def upload(source):
 		ext = os.path.splitext(filename)[1]
 		if ext != ".bmp":
 			continue
-		
+
 		img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
 		while img.ndim < 4:
 			img = img[..., np.newaxis]
