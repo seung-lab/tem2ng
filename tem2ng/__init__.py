@@ -2,6 +2,7 @@ import re
 import os
 
 import click
+from tqdm import tqdm
 
 from cloudvolume import CloudVolume, Bbox
 from cloudvolume.exceptions import InfoUnavailableError
@@ -99,7 +100,7 @@ def upload(source, destination):
 	"""
 	vol = CloudVolume(destination)
 
-	for entry in os.scandir(source):
+	for entry in tqdm(os.scandir(source)):
 		if not entry.is_file():
 			continue
 		filename = entry.name
