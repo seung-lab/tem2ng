@@ -123,10 +123,10 @@ def upload(source, destination):
         touch(os.path.join(progress_dir, filename))
         return 1
 
-  with tqdm(desc="Upload", total=total) as pbar:
-    with pathos.pools.ProcessPool(parallel) as pool:
-      for num_inserted in pool.imap(process, to_upload):
-        pbar.update(num_inserted)
+    with tqdm(desc="Upload", total=total) as pbar:
+        with pathos.pools.ProcessPool(parallel) as pool:
+            for num_inserted in pool.imap(process, to_upload):
+                pbar.update(num_inserted)
 
 
 
