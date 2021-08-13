@@ -49,7 +49,7 @@ class Tuple3(click.ParamType):
 @click.group()
 @click.option("-p", "--parallel", default=1, help="Run with this number of parallel processes. If 0, use number of cores.")
 @click.pass_context
-def main(parallel):
+def main(ctx, parallel):
     """
     Upload tiles from a specific setup at PNI to
     cloud storage.
