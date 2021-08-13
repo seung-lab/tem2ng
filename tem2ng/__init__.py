@@ -1,15 +1,16 @@
+from concurrent.futures import ProcessPoolExecutor
 import re
 import os
 
 import click
+import cv2
+import numpy as np
 from tqdm import tqdm
+import tinybrain
 
 from cloudvolume import CloudVolume, Bbox
 from cloudvolume.exceptions import InfoUnavailableError
-import numpy as np
-import tinybrain
-
-import cv2
+from cloudvolume.lib import mkdir, touch
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
@@ -101,29 +102,29 @@ def upload(source, destination):
 	cloud storage.
 	"""
 	vol = CloudVolume(destination)
+	progress_dir = mkdir(os.path.join(source, 'progress'))
 
-	for entry in tqdm(os.scandir(source)):
-		if not entry.is_file():
-			continue
-		filename = entry.name
-		ext = os.path.splitext(filename)[1]
-		if ext != ".bmp":
-			continue
+	done_files = set(os.listdir(progress_dir))
+	all_files = os.listdir(source)
+	all_files = set([ 
+		fname for fname in all_files 
+		if os.path.splitext(filename)[1] != "bmp" 
+	])
+	to_upload = list(all_files.difference(done_files))
+	to_upload.sort()
 
-		filename = os.path.join(source, filename)
-		img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+	def process(filename):
+		img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
 		while img.ndim < 4:
 			img = img[..., np.newaxis]
 
 		bbx = Bbox.from_filename(get_ng(filename))
 		vol[bbx] = img
+		touch(os.path.join(progress_dir, filename)
 
-
-
-
-
-
-
+	with ProcessPoolExecutor(max_workers=8) as executor:
+		for _ in tqdm(executor.imap(process, to_upload), total=len(to_upload)):
+			pass
 
 
 
