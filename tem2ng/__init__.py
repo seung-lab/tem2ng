@@ -108,7 +108,7 @@ def upload(source, destination):
 	all_files = os.listdir(source)
 	all_files = set([ 
 		fname for fname in all_files 
-		if os.path.splitext(filename)[1] != "bmp" 
+		if os.path.splitext(fname)[1] != "bmp" 
 	])
 	to_upload = list(all_files.difference(done_files))
 	to_upload.sort()
