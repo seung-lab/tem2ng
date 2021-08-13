@@ -19,7 +19,7 @@ def get_ng(tilename, z=0):
 	y_map = {4:0,3:1,2:2,5:0,0:1,1:2,6:0,7:1,8:2}
 	get_y = lambda t1,t2: 6000 * ((t1//24)*3 + y_map[t2])
 
-	t1, t2 = [ int(_) for _ in re.match(TILE_REGEXP, tilename).groups() ]
+	t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
 	
 	x0 = get_x(t1, t2)
 	xf = x0 + 6000
