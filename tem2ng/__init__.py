@@ -118,7 +118,7 @@ def upload(ctx, source, destination):
         fname for fname in all_files 
         if (
             os.path.isfile(os.path.join(source, fname))
-            and os.path.splitext(fname)[1] != "bmp"
+            and os.path.splitext(fname)[1] == ".bmp"
         )
     ])
     to_upload = list(all_files.difference(done_files))
