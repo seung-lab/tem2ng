@@ -3,22 +3,22 @@ import os
 
 import click
 
-from cloudvolume import CloudVolume
+from cloudvolume import CloudVolume, Bbox
 from cloudvolume.exceptions import InfoUnavailableError
 import numpy as np
 import tinybrain
 
-from PIL import Image
+import cv2
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
 def get_ng(tilename, z=0):
 	x_map = {4:0,5:1,6:2,3:0,0:1,7:2,2:0,1:1,8:2}
-	get_x = lambda t1,t2: 6000 * ((t1%25)*3 + x_map[t2])
+	get_x = lambda t1,t2: 6000 * ((t1%24)*3 + x_map[t2])
 	y_map = {4:0,3:1,2:2,5:0,0:1,1:2,6:0,7:1,8:2}
-	get_y = lambda t1,t2: 6000 * ((t1//25)*3 + y_map[t2])
+	get_y = lambda t1,t2: 6000 * ((t1//24)*3 + y_map[t2])
 
-	t1, t2 = re.match(TILE_REGEXP, tilename).groups()
+	t1, t2 = [ int(_) for _ in re.match(TILE_REGEXP, tilename).groups() ]
 	
 	x0 = get_x(t1, t2)
 	xf = x0 + 6000
@@ -52,7 +52,7 @@ def main():
 @click.option('--resolution', type=Tuple3(), default="1,1,1", help="Resolution of a layer in nanometers.", show_default=True)
 @click.option('--bit-depth', type=int, default=8, help="Resolution of a layer in nanometers.", show_default=True)
 @click.argument("cloudpath")
-def info(dataset_size, voxel_offset, chunk_size, resolution, bit_depth):
+def info(cloudpath, dataset_size, voxel_offset, chunk_size, resolution, bit_depth):
 	"""
 	Creates and uploads the neuroglancer info file.
 	This defines the size and properties of the image.
@@ -79,21 +79,19 @@ def info(dataset_size, voxel_offset, chunk_size, resolution, bit_depth):
 @main.command()
 @click.argument("source")
 def upload(source):
-	cv = CloudVolume("matrix://pni-tem1/test/")
+	vol = CloudVolume("matrix://pni-tem1/test/")
 
 	for filename in os.scandir(source):
 		ext = os.path.splitext(filename)[1]
 		if ext != ".bmp":
 			continue
+		
+		img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+		while img.ndim < 4:
+			img = img[..., np.newaxis]
 
-		img = Image.open("tile_99_0.bmp")
-		import pdb; pdb.set_trace()
-        # img = np.swapaxes(img, 0, 1)
-        # img = img[..., np.newaxis]
-
-
-	img = Image.open("tile_99_0.bmp")
-	img.show()
+		bbx = Bbox.from_filename(get_ng(filename))
+		vol[bbx] = img
 
 
 
