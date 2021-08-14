@@ -17,7 +17,7 @@ TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
 def get_ng(tilename, z=0):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
-    
+
     col_height = 23 if t1 >= 288 else 24
 
     x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
@@ -44,7 +44,7 @@ class Tuple3(click.ParamType):
       if len(value) != 3:
         self.fail(f"'{value}' does not contain a comma delimited list of 3 integers.")
     return value
-  
+
 
 @click.group()
 @click.option("-p", "--parallel", default=1, help="Run with this number of parallel processes. If 0, use number of cores.")
@@ -69,8 +69,8 @@ def main(ctx, parallel):
 @click.option('--num-mips', type=int, default=1, help="Number of mip levels to generate at once.", show_default=True)
 @click.argument("cloudpath")
 def info(
-    cloudpath, 
-    dataset_size, voxel_offset, chunk_size, 
+    cloudpath,
+    dataset_size, voxel_offset, chunk_size,
     resolution, bit_depth, num_mips
 ):
     """
@@ -85,7 +85,7 @@ def info(
         num_channels    = 1,
         layer_type      = 'image',
         data_type       = f'uint{bit_depth}',
-        encoding        = 'raw', 
+        encoding        = 'raw',
         resolution      = resolution, # Voxel scaling, units are in nanometers
         voxel_offset    = voxel_offset, # x,y,z offset in voxels from the origin
         # Pick a convenient size for your underlying chunk representation
@@ -114,8 +114,8 @@ def upload(ctx, source, destination):
 
     done_files = set(os.listdir(progress_dir))
     all_files = os.listdir(source)
-    all_files = set([ 
-        fname for fname in all_files 
+    all_files = set([
+        fname for fname in all_files
         if (
             os.path.isfile(os.path.join(source, fname))
             and os.path.splitext(fname)[1] == ".bmp"
@@ -126,6 +126,7 @@ def upload(ctx, source, destination):
 
     def process(filename):
         img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
+        img = cv2.transpose(img)
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
@@ -140,6 +141,3 @@ def upload(ctx, source, destination):
         with pathos.pools.ProcessPool(parallel) as pool:
             for num_inserted in pool.imap(process, to_upload):
                 pbar.update(num_inserted)
-
-
-
