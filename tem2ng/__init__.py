@@ -15,22 +15,26 @@ from cloudvolume.lib import mkdir, touch
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
-def get_ng(tilename, z=0):
+def get_ng(tilename, left_most, bottom_most, stage_x, stage_y, z=0):
+    # stage_x, stage_y: stage coordinates in pixel value
+    # left_most, bottom_most: boundary of the montage at left, bottom
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
 
-    col_height = 23 if t1 >= 288 else 24
+    x_map = {6:-5400,5:-5400,4:-5400,7:0,0:0,3:0,8:5400,1:5400,2:5400}
 
-    x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
-    get_x = lambda t1,t2: 6000 * ((t1//col_height)*3 + x_map[t2])
-    y_map = {6:0,5:1,4:2,7:0,0:1,3:2,8:0,1:1,2:2}
-    get_y = lambda t1,t2: 6000 * ((col_height-1-t1%col_height)*3 + y_map[t2])
+    y_map = {6:5400,7:5400,8:5400,5:0,0:0,1:0,4:-5400,3:-5400,2:-5400}
 
-    x0 = get_x(t1, t2)
+    x0 = stage_x - left_most + x_map[t2]
     xf = x0 + 6000
-    y0 = get_y(t1,t2)
+    y0 = stage_y - bottom_most + y_map[t2]
     yf = y0 + 6000
 
     return f"{x0}-{xf}_{y0}-{yf}_{z}-{z+1}"
+
+def read_stage(path):
+    with open(path) as f:
+        lines = f.readlines()
+    return float(lines[10].split(" = ")[1]), float(lines[11].split(" = ")[1])
 
 class Tuple3(click.ParamType):
   """A command line option type consisting of 3 comma-separated integers."""
@@ -112,6 +116,9 @@ def upload(ctx, source, destination):
     vol = CloudVolume(destination)
     progress_dir = mkdir(os.path.join(source, 'progress'))
 
+
+    x, y = read_stage(os.path.join(source, "tile_0_4.txt"))
+
     done_files = set(os.listdir(progress_dir))
     all_files = os.listdir(source)
     all_files = set([
@@ -123,14 +130,17 @@ def upload(ctx, source, destination):
     ])
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
+    res = 3
 
-    def process(filename):
+    def process(filename, left_most=x/res - 10000, bottom_most=y/res - 140000, res=res):
         img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
         img = cv2.transpose(img)
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
-        bbx = Bbox.from_filename(get_ng(filename))
+        stage_x, stage_y = read_stage(os.path.join(source, filename.replace(".bmp",".txt")))
+
+        bbx = Bbox.from_filename(get_ng(filename, left_most, bottom_most, stage_x/res, stage_y/res))
         vol[bbx] = img
         touch(os.path.join(progress_dir, filename))
         return 1
