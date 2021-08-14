@@ -24,9 +24,9 @@ def get_ng(tilename, left_most, bottom_most, stage_x, stage_y, z=0):
 
     y_map = {6:5400,7:5400,8:5400,5:0,0:0,1:0,4:-5400,3:-5400,2:-5400}
 
-    x0 = stage_x - left_most + x_map[t2]
+    x0 = int(stage_x - left_most + x_map[t2])
     xf = x0 + 6000
-    y0 = stage_y - bottom_most + y_map[t2]
+    y0 = int(stage_y - bottom_most + y_map[t2])
     yf = y0 + 6000
 
     return f"{x0}-{xf}_{y0}-{yf}_{z}-{z+1}"
