@@ -97,7 +97,7 @@ def info(
         chunk_size      = chunk_size, # units are voxels
         volume_size     = dataset_size, # e.g. a cubic millimeter dataset
     )
-    cv = CloudVolume(cloudpath, info=info)
+    cv = CloudVolume(cloudpath, info=info, non_aligned_writes=True)
 
     for mip in range(1, num_mips):
         cv.add_scale([2 ** mip, 2 ** mip, 1])
