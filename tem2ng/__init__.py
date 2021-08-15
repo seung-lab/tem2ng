@@ -135,7 +135,7 @@ def upload(ctx, source, destination):
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
 
-    def process(filename, west_most = x - x_step*3, south_most = y - y_step*24):
+    def process(filename, west_most, south_most):
         img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
         img = cv2.transpose(img)
         while img.ndim < 4:
@@ -152,5 +152,5 @@ def upload(ctx, source, destination):
 
     with tqdm(desc="Upload", total=len(all_files), initial=len(done_files)) as pbar:
         with pathos.pools.ProcessPool(parallel) as pool:
-            for num_inserted in pool.imap(process, to_upload):
+            for num_inserted in pool.imap(lambda x: process(x, west_most, south_most), to_upload):
                 pbar.update(num_inserted)
