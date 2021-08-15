@@ -15,15 +15,16 @@ from cloudvolume.lib import mkdir, touch
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
-def get_ng(tilename, z=0):
+x_step = 45541
+y_step = 42309
+
+def get_ng(tilename, x, y, z=0):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
 
-    col_height = 23 if t1 >= 288 else 24
-
     x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
-    get_x = lambda t1,t2: 6000 * ((t1//col_height)*3 + x_map[t2])
+    get_x = lambda t1,t2: 6000 * round(x / x_step)*3 + x_map[t2])
     y_map = {6:0,5:1,4:2,7:0,0:1,3:2,8:0,1:1,2:2}
-    get_y = lambda t1,t2: 6000 * ((col_height-1-t1%col_height)*3 + y_map[t2])
+    get_y = lambda t1,t2: 6000 * (40 - round(y / y_step))*3 + y_map[t2])
 
     x0 = get_x(t1, t2)
     xf = x0 + 6000
@@ -31,6 +32,11 @@ def get_ng(tilename, z=0):
     yf = y0 + 6000
 
     return f"{x0}-{xf}_{y0}-{yf}_{z}-{z+1}"
+
+def read_stage(path):
+    with open(path) as f:
+        lines = f.readlines()
+    return float(lines[10].split(" = ")[1]), float(lines[11].split(" = ")[1])
 
 class Tuple3(click.ParamType):
   """A command line option type consisting of 3 comma-separated integers."""
@@ -112,6 +118,11 @@ def upload(ctx, source, destination):
     vol = CloudVolume(destination)
     progress_dir = mkdir(os.path.join(source, 'progress'))
 
+    x, y = read_stage(os.path.join(source, "tile_0_4.txt"))
+
+    west_most = x - x_step*3
+    south_most = y - y_step*24
+
     done_files = set(os.listdir(progress_dir))
     all_files = os.listdir(source)
     all_files = set([
@@ -124,13 +135,15 @@ def upload(ctx, source, destination):
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
 
-    def process(filename):
+    def process(filename, west_most, south_most):
         img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
         img = cv2.transpose(img)
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
-        bbx = Bbox.from_filename(get_ng(filename))
+        stage_x, stage_y = read_stage(os.path.join(source, filename.replace(".bmp",".txt")))
+
+        bbx = Bbox.from_filename(get_ng(filename, stage_x-west_most, stage_y-south_most))
         vol[bbx] = img
         touch(os.path.join(progress_dir, filename))
         return 1
