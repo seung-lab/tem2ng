@@ -147,6 +147,7 @@ def upload(ctx, source, destination):
             for fname in all_files:
                 if filename[:-5] in fname and '.txt' in fname:
                     stage_x, stage_y = read_stage(os.path.join(source, fname))
+                    break
 
         bbx = Bbox.from_filename(get_ng(filename, stage_x-west_most, stage_y-south_most))
         vol[bbx] = img
