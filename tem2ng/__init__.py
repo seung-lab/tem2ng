@@ -24,7 +24,7 @@ def get_ng(tilename, x, y, z=0):
     x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
     get_x = lambda t2: 6000 * (round(x / x_step)*3 + x_map[t2])
     y_map = {6:0,5:1,4:2,7:0,0:1,3:2,8:0,1:1,2:2}
-    get_y = lambda t2: 6000 * ((40 - round(y / y_step))*3 + y_map[t2])
+    get_y = lambda t2: 6000 * ((50 - round(y / y_step))*3 + y_map[t2])
 
     x0 = get_x(t2)
     xf = x0 + 6000
