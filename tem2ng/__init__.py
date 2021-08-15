@@ -135,7 +135,7 @@ def upload(ctx, source, destination):
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
 
-    def process(filename, west_most, south_most):
+    def process(filename, west_most = x - x_step*3, south_most = y - y_step*24):
         img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
         img = cv2.transpose(img)
         while img.ndim < 4:
