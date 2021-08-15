@@ -141,6 +141,9 @@ def upload(ctx, source, destination):
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
+        stage_x = west_most
+        stage_y = south_most
+
         try:
             stage_x, stage_y = read_stage(os.path.join(source, filename.replace(".bmp",".txt")))
         except:
