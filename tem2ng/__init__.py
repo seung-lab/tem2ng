@@ -15,7 +15,7 @@ from cloudvolume.lib import mkdir, touch
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
-x_step = 45541
+x_step = 42320
 y_step = 42309
 
 def get_ng(tilename, x, y, z=0):
@@ -110,7 +110,7 @@ def info(
 @click.argument("source")
 @click.argument("destination")
 @click.pass_context
-def upload(ctx, source, destination):
+def upload(ctx, source, destination, bottom_tile="tile_0_4.txt", midleft_tile="tile_62_0.txt"):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -118,10 +118,14 @@ def upload(ctx, source, destination):
     vol = CloudVolume(destination)
     progress_dir = mkdir(os.path.join(source, 'progress'))
 
-    x, y = read_stage(os.path.join(source, "tile_0_4.txt"))
+    _, y = read_stage(os.path.join(source, bottom_tile)
 
-    west_most = x - x_step*3
+
     south_most = y - y_step*24
+
+    x, _ = read_stage(os.path.join(source, midleft_tile))
+
+    west_most = x - x_step*5
 
     done_files = set(os.listdir(progress_dir))
     all_files = os.listdir(source)
