@@ -118,13 +118,10 @@ def upload(ctx, source, destination, bottom_tile="tile_0_4.txt", midleft_tile="t
     vol = CloudVolume(destination)
     progress_dir = mkdir(os.path.join(source, 'progress'))
 
-    _, y = read_stage(os.path.join(source, bottom_tile)
-
-
+    _, y = read_stage(os.path.join(source, bottom_tile))
     south_most = y - y_step*24
 
     x, _ = read_stage(os.path.join(source, midleft_tile))
-
     west_most = x - x_step*5
 
     done_files = set(os.listdir(progress_dir))
