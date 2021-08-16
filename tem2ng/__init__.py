@@ -133,6 +133,13 @@ def upload(ctx, source, destination, bottom_tile="tile_0_4.txt", midleft_tile="t
             and os.path.splitext(fname)[1] == ".bmp"
         )
     ])
+    all_txt = set([
+        fname for fname in os.listdir(source)
+        if (
+            os.path.isfile(os.path.join(source, fname))
+            and ".txt" in fname
+        )
+    ])
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
 
@@ -148,8 +155,9 @@ def upload(ctx, source, destination, bottom_tile="tile_0_4.txt", midleft_tile="t
         try:
             stage_x, stage_y = read_stage(os.path.join(source, filename.replace(".bmp",".txt")))
         except:
-            for fname in all_files:
-                if filename[:-5] in fname and '.txt' in fname:
+            for fname in all_txt:
+                if filename[:-5] in fname:
+                    print(filename + "lacks .txt")
                     stage_x, stage_y = read_stage(os.path.join(source, fname))
                     break
 
