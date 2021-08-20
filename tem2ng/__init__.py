@@ -109,8 +109,9 @@ def info(
 @main.command()
 @click.argument("source")
 @click.argument("destination")
+@click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, bottom_tile="tile_0_4.txt", midleft_tile="tile_62_0.txt"):
+def upload(ctx, source, destination, z, bottom_tile="tile_0_4.txt", midleft_tile="tile_62_0.txt"):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -161,7 +162,7 @@ def upload(ctx, source, destination, bottom_tile="tile_0_4.txt", midleft_tile="t
                     stage_x, stage_y = read_stage(os.path.join(source, fname))
                     break
 
-        bbx = Bbox.from_filename(get_ng(filename, stage_x-west_most, stage_y-south_most))
+        bbx = Bbox.from_filename(get_ng(filename, stage_x-west_most, stage_y-south_most, z=z))
         vol[bbx] = img
         touch(os.path.join(progress_dir, filename))
         return 1
