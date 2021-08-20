@@ -103,8 +103,9 @@ def info(
 @main.command()
 @click.argument("source")
 @click.argument("destination")
+@click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination):
+def upload(ctx, source, destinatio, z):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -129,7 +130,7 @@ def upload(ctx, source, destination):
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
-        bbx = Bbox.from_filename(get_ng(filename))
+        bbx = Bbox.from_filename(get_ng(filename, z=z))
         vol[bbx] = img
         touch(os.path.join(progress_dir, filename))
         return 1
