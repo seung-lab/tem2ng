@@ -110,8 +110,10 @@ def info(
 @click.argument("source")
 @click.argument("destination")
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
+@click.option('--bottom_tile', type=str, default="tile_0_4.txt", help="bottom most tile", show_default=True)
+@click.option('--midleft_tile', type=str, default="tile_62_0.txt", help="middle tile leftmost", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, z, bottom_tile="tile_0_4.txt", midleft_tile="tile_62_0.txt"):
+def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
     """
     Process a subtile directory and upload to
     cloud storage.
