@@ -132,8 +132,8 @@ def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
 
     stage_csv = read_stage_csv()
 
-    south_most = stage_cvs[bottom_tile][1] - y_step*24
-    west_most = stage_cvs[midleft_tile][0] - x_step*5
+    south_most = stage_csv[bottom_tile][1] - y_step*24
+    west_most = stage_csv[midleft_tile][0] - x_step*5
 
     done_files = set(os.listdir(progress_dir))
     all_files = os.listdir(source)
