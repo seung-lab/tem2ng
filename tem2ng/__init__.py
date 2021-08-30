@@ -4,6 +4,7 @@ import multiprocessing as mp
 
 import click
 import cv2
+import csv
 import numpy as np
 import pathos.pools
 from tqdm import tqdm
