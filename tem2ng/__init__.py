@@ -38,6 +38,14 @@ def read_stage(path):
         lines = f.readlines()
     return float(lines[10].split(" = ")[1]), float(lines[11].split(" = ")[1])
 
+def read_stage_cvs(path):
+    stage_csv = []
+    with open(os.path.join(path, "stage_positions.csv")) as f:
+        reader = csv.reader(f, delimiter=',')
+        for row in reader:
+            stage_csv.append([float(row[1]),float(row[2])])
+    return stage_csv
+
 class Tuple3(click.ParamType):
   """A command line option type consisting of 3 comma-separated integers."""
   name = 'tuple3'
@@ -110,8 +118,8 @@ def info(
 @click.argument("source")
 @click.argument("destination")
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
-@click.option('--bottom_tile', type=str, default="tile_0_4.txt", help="bottom most tile", show_default=True)
-@click.option('--midleft_tile', type=str, default="tile_62_0.txt", help="middle tile leftmost", show_default=True)
+@click.option('--bottom_tile', type=int, default=0, help="bottom most tile", show_default=True)
+@click.option('--midleft_tile', type=int, default=62, help="middle tile leftmost", show_default=True)
 @click.pass_context
 def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
     """
@@ -121,11 +129,12 @@ def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
     vol = CloudVolume(destination)
     progress_dir = mkdir(os.path.join(source, 'progress'))
 
-    _, y = read_stage(os.path.join(source, bottom_tile))
-    south_most = y - y_step*24
+    stage_csv = read_stage_cvs(source)
+
+    south_most = stage_cvs[bottom_tile][1] - y_step*24
 
     x, _ = read_stage(os.path.join(source, midleft_tile))
-    west_most = x - x_step*5
+    west_most = stage_cvs[midleft_tile][0] - x_step*5
 
     done_files = set(os.listdir(progress_dir))
     all_files = os.listdir(source)
@@ -136,17 +145,11 @@ def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
             and os.path.splitext(fname)[1] == ".bmp"
         )
     ])
-    all_txt = set([
-        fname for fname in os.listdir(source)
-        if (
-            os.path.isfile(os.path.join(source, fname))
-            and ".txt" in fname
-        )
-    ])
+
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
 
-    def process(filename, west_most, south_most):
+    def process(filename, west_most, south_most, stage_csv):
         img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
         img = cv2.transpose(img)
         while img.ndim < 4:
@@ -155,16 +158,9 @@ def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
         stage_x = west_most
         stage_y = south_most
 
-        try:
-            stage_x, stage_y = read_stage(os.path.join(source, filename.replace(".bmp",".txt")))
-        except:
-            for fname in all_txt:
-                if filename[:-5] in fname:
-                    print(filename + "lacks .txt")
-                    stage_x, stage_y = read_stage(os.path.join(source, fname))
-                    break
+        stages = stage_csv[int(filename.split("_")[1])]
 
-        bbx = Bbox.from_filename(get_ng(filename, stage_x-west_most, stage_y-south_most, z=z))
+        bbx = Bbox.from_filename(get_ng(filename, stages[0]-west_most, stages[1]-south_most, z=z))
         vol[bbx] = img
         touch(os.path.join(progress_dir, filename))
         return 1
@@ -173,5 +169,5 @@ def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
 
     with tqdm(desc="Upload", total=len(all_files), initial=len(done_files)) as pbar:
         with pathos.pools.ProcessPool(parallel) as pool:
-            for num_inserted in pool.imap(lambda x: process(x, west_most, south_most), to_upload):
+            for num_inserted in pool.imap(lambda x: process(x, west_most, south_most, stage_csv), to_upload):
                 pbar.update(num_inserted)
