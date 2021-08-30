@@ -38,7 +38,7 @@ def read_stage(path):
         lines = f.readlines()
     return float(lines[10].split(" = ")[1]), float(lines[11].split(" = ")[1])
 
-def read_stage_cvs(path):
+def read_stage_csv(path):
     stage_csv = []
     with open(os.path.join(path, "stage_positions.csv")) as f:
         reader = csv.reader(f, delimiter=',')
@@ -129,11 +129,9 @@ def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
     vol = CloudVolume(destination)
     progress_dir = mkdir(os.path.join(source, 'progress'))
 
-    stage_csv = read_stage_cvs(source)
+    stage_csv = read_stage_csv(source)
 
     south_most = stage_cvs[bottom_tile][1] - y_step*24
-
-    x, _ = read_stage(os.path.join(source, midleft_tile))
     west_most = stage_cvs[midleft_tile][0] - x_step*5
 
     done_files = set(os.listdir(progress_dir))
