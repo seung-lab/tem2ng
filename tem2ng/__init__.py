@@ -43,6 +43,7 @@ def read_stage_csv(file="metadata/stage_positions.csv"):
     stage_csv = []
     with open(file) as f:
         reader = csv.reader(f, delimiter=',')
+        next(reader)
         for row in reader:
             stage_csv.append([float(row[1]),float(row[2])])
     return stage_csv
