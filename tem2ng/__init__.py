@@ -39,7 +39,7 @@ def read_stage(path):
         lines = f.readlines()
     return float(lines[10].split(" = ")[1]), float(lines[11].split(" = ")[1])
 
-def read_stage_csv(file="stage_positions.csv"):
+def read_stage_csv(file="metadata/stage_positions.csv"):
     stage_csv = []
     with open(file) as f:
         reader = csv.reader(f, delimiter=',')
