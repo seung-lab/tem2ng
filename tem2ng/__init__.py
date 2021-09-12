@@ -121,7 +121,7 @@ def upload(ctx, source, destination, z):
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
 
-    def process(filename, west_most, south_most, stage_csv):
+    def process(filename):
         im = Image.open(os.path.join(source, filename))
         img = np.array(im)
         while img.ndim < 4:
