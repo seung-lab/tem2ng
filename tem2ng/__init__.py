@@ -15,6 +15,7 @@ from cloudvolume import CloudVolume, Bbox
 from cloudvolume.exceptions import InfoUnavailableError
 from cloudvolume.lib import mkdir, touch
 
+Image.MAX_IMAGE_PIXELS = 4325000000
 TILE_REGEXP = re.compile(r'SuperSuperTile_(\d+)_(\d+)\.tif')
 
 def get_ng(tilename, z=0):
