@@ -124,7 +124,7 @@ def upload(ctx, source, destination, z):
 
     def process(filename):
         im = Image.open(os.path.join(source, filename))
-        img = np.array(im)
+        img = np.transpose(np.array(im))
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
