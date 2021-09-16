@@ -16,8 +16,9 @@ from cloudvolume.lib import mkdir, touch
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
-x_step = 42320
-y_step = 42309
+# x_step = 42320; y_step = 42309 # x, y for larger overlap
+x_step = 42790
+y_step = 42790
 
 def get_ng(tilename, x, y, z=0):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
@@ -120,10 +121,10 @@ def info(
 @click.argument("source")
 @click.argument("destination")
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
-@click.option('--bottom_tile', type=int, default=0, help="bottom most tile", show_default=True)
-@click.option('--midleft_tile', type=int, default=62, help="middle tile leftmost", show_default=True)
+# @click.option('--bottom_tile', type=int, default=0, help="bottom most tile", show_default=True)
+# @click.option('--midleft_tile', type=int, default=62, help="middle tile leftmost", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
+def upload(ctx, source, destination, z):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -133,8 +134,8 @@ def upload(ctx, source, destination, z, bottom_tile, midleft_tile):
 
     stage_csv = read_stage_csv()
 
-    south_most = stage_csv[bottom_tile][1] - y_step*24
-    west_most = stage_csv[midleft_tile][0] - x_step*5
+    south_most = min([i[1] for i in stage_csv]) - y_step*10
+    west_most = min([i[0] for i in stage_csv]) - x_step*5
 
     done_files = set(os.listdir(progress_dir))
     all_files = os.listdir(source)
