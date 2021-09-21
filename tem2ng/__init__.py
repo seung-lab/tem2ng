@@ -17,16 +17,16 @@ from cloudvolume.lib import mkdir, touch
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
 # x_step = 42320; y_step = 42309 # x, y for larger overlap
-x_step = 44395
-y_step = 44395
+# blade2 step: step = 44395
+# blade1 step: step = 42795
 
-def get_ng(tilename, x, y, z=0):
+def get_ng(tilename, x, y, z, step):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
 
     x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
-    get_x = lambda t2: 6000 * (round(x / x_step)*3 + x_map[t2])
+    get_x = lambda t2: 6000 * (round(x / step)*3 + x_map[t2])
     y_map = {6:0,5:1,4:2,7:0,0:1,3:2,8:0,1:1,2:2}
-    get_y = lambda t2: 6000 * ((35 - round(y / y_step))*3 + y_map[t2])
+    get_y = lambda t2: 6000 * ((35 - round(y / step))*3 + y_map[t2])
 
     x0 = get_x(t2)
     xf = x0 + 6000
@@ -121,8 +121,9 @@ def info(
 @click.argument("source")
 @click.argument("destination")
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
+@click.option('--step', type=int, default=44395, help="Stage step size; default Blade2 step; Blade1 42795", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, z):
+def upload(ctx, source, destination, z, step):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -132,8 +133,8 @@ def upload(ctx, source, destination, z):
 
     stage_csv = read_stage_csv()
 
-    south_most = min([i[1] for i in stage_csv]) - y_step*4
-    west_most = min([i[0] for i in stage_csv]) - x_step*4
+    south_most = min([i[1] for i in stage_csv]) - step*4
+    west_most = min([i[0] for i in stage_csv]) - step*4
 
     done_files = set(os.listdir(progress_dir))
     all_files = os.listdir(source)
@@ -148,18 +149,15 @@ def upload(ctx, source, destination, z):
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
 
-    def process(filename, west_most, south_most, stage_csv):
+    def process(filename, stage_csv):
         img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
         img = cv2.transpose(img)
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
-        stage_x = west_most
-        stage_y = south_most
-
         stages = stage_csv[int(filename.split("_")[1])]
 
-        bbx = Bbox.from_filename(get_ng(filename, stages[0]-west_most, stages[1]-south_most, z=z))
+        bbx = Bbox.from_filename(get_ng(filename, stages[0]-west_most, stages[1]-south_most, z=z, step=step))
         vol[bbx] = img
         touch(os.path.join(progress_dir, filename))
         return 1
@@ -168,5 +166,5 @@ def upload(ctx, source, destination, z):
 
     with tqdm(desc="Upload", total=len(all_files), initial=len(done_files)) as pbar:
         with pathos.pools.ProcessPool(parallel) as pool:
-            for num_inserted in pool.imap(lambda x: process(x, west_most, south_most, stage_csv), to_upload):
+            for num_inserted in pool.imap(lambda x: process(x, stage_csv), to_upload):
                 pbar.update(num_inserted)
