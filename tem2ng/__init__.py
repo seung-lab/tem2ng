@@ -117,7 +117,7 @@ def upload(ctx, source, destination, z):
 
     def process(filename):
         img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
-        # img = cv2.transpose(img)
+        img = cv2.transpose(img)
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
