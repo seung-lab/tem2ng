@@ -17,10 +17,10 @@ TILE_REGEXP = re.compile(r'c(\d+)r(\d+)\.tif')
 
 def get_ng(tilename, z=0):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
-    x0 = (t1-1)*2000
-    y0 = (t2-1)*2000
+    x0 = (t1-1)*4000
+    y0 = (t2-1)*4000
 
-    return f"{x0}-{x0+2000}_{y0}-{y0+2000}_{z}-{z+1}"
+    return f"{x0}-{x0+4000}_{y0}-{y0+4000}_{z}-{z+1}"
 
 class Tuple3(click.ParamType):
   """A command line option type consisting of 3 comma-separated integers."""
