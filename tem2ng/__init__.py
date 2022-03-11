@@ -15,10 +15,10 @@ from cloudvolume.lib import mkdir, touch
 
 TILE_REGEXP = re.compile(r'c(\d+)r(\d+)\.tif')
 
-def get_ng(tilename, z=0):
+def get_ng(tilename, z=0, pad=0):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
-    x0 = (t1-1)*4000
-    y0 = (t2-1)*4000
+    x0 = (t1-1)*4000 + pad
+    y0 = (t2-1)*4000 + pad
 
     return f"{x0}-{x0+4000}_{y0}-{y0+4000}_{z}-{z+1}"
 
@@ -94,8 +94,9 @@ def info(
 @click.argument("source")
 @click.argument("destination")
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
+@click.option('--pad', type=int, default=0, help="padding at x and y from top left", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, z):
+def upload(ctx, source, destination, z, pad):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -121,7 +122,7 @@ def upload(ctx, source, destination, z):
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
-        bbx = Bbox.from_filename(get_ng(filename, z=z))
+        bbx = Bbox.from_filename(get_ng(filename, z=z, pad=pad))
         vol[bbx] = img
         touch(os.path.join(progress_dir, filename))
         return 1
