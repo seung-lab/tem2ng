@@ -15,12 +15,12 @@ from cloudvolume.lib import mkdir, touch
 
 TILE_REGEXP = re.compile(r'c(\d+)r(\d+)\.tif')
 
-def get_ng(tilename, z=0, pad=0):
+def get_ng(tilename, z=0, pad=0, tile=2048):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
-    x0 = (t1-1)*4000 + pad
-    y0 = (t2-1)*4000 + pad
+    x0 = (t1-1)*tile + pad
+    y0 = (t2-1)*tile + pad
 
-    return f"{x0}-{x0+4000}_{y0}-{y0+4000}_{z}-{z+1}"
+    return f"{x0}-{x0+tile}_{y0}-{y0+tile}_{z}-{z+1}"
 
 class Tuple3(click.ParamType):
   """A command line option type consisting of 3 comma-separated integers."""
@@ -95,8 +95,9 @@ def info(
 @click.argument("destination")
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
 @click.option('--pad', type=int, default=0, help="padding at x and y from top left", show_default=True)
+@click.option('--tile', type=int, default=2048, help="size of each tile, need to be consistent with chunk size", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, z, pad):
+def upload(ctx, source, destination, z, pad, tile):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -122,7 +123,7 @@ def upload(ctx, source, destination, z, pad):
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
-        bbx = Bbox.from_filename(get_ng(filename, z=z, pad=pad))
+        bbx = Bbox.from_filename(get_ng(filename, z=z, pad=pad, tile=tile))
         vol[bbx] = img
         touch(os.path.join(progress_dir, filename))
         return 1
