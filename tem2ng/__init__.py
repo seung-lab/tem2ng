@@ -19,9 +19,9 @@ def get_ng(tilename):
 
     z = int(tilename.split(":")[1].split(".")[0])-740
     x0 = 0
-    xf = 1968
+    xf = 2000
     y0 = 0
-    yf = 1206
+    yf = 2000
 
     return f"{x0}-{xf}_{y0}-{yf}_{z}-{z+1}"
 
@@ -120,6 +120,7 @@ def upload(ctx, source, destination, z):
 
     def process(filename):
         img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
+        img = cv2.copyMakeBorder(img,397,397,16,16,cv2.BORDER_CONSTANT,value=[0,0,0])
         img = cv2.transpose(img)
         while img.ndim < 4:
             img = img[..., np.newaxis]
