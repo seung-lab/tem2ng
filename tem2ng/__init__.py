@@ -111,7 +111,7 @@ def upload(ctx, source, destination, z, pad, tile):
         fname for fname in all_files
         if (
             os.path.isfile(os.path.join(source, fname))
-            and os.path.splitext(fname)[1] == ".tif"
+            and os.path.splitext(fname)[1] == ".png"
         )
     ])
     to_upload = list(all_files.difference(done_files))
