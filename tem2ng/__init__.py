@@ -13,10 +13,10 @@ from cloudvolume import CloudVolume, Bbox
 from cloudvolume.exceptions import InfoUnavailableError
 from cloudvolume.lib import mkdir, touch
 
-TILE_REGEXP = re.compile(r'c(\d+)r(\d+)\.tif')
+TILE_REGEXP = re.compile(r'tr(\d+)-tc(\d+)\.png')
 
 def get_ng(tilename, z=0, pad=0, tile=2048):
-    t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
+    t2, t1 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
     x0 = (t1-1)*tile + pad
     y0 = (t2-1)*tile + pad
 
