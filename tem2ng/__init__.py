@@ -105,6 +105,7 @@ def info(
     """
     if bit_depth not in (8,16,32,64):
         print("tem2ng: bit depth must be 8, 16, 32, or 64.")
+        return
 
     info = CloudVolume.create_new_info(
         num_channels    = 1,
