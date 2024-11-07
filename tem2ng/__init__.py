@@ -14,6 +14,8 @@ from cloudvolume import CloudVolume, Bbox
 from cloudvolume.exceptions import InfoUnavailableError
 from cloudvolume.lib import mkdir, touch
 
+import cloudfiles.paths
+
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
 # x_step = 42320; y_step = 42309 # x, y for larger overlap
@@ -50,6 +52,10 @@ def read_stage_csv(source):
             stage_csv.append([float(row[1]),float(row[2])])
     return stage_csv
 
+class CloudPath(click.ParamType):
+  name = "CloudPath"
+  def convert(self, value, param, ctx):
+    return cloudfiles.paths.normalize(value)
 
 class Tuple3(click.ParamType):
   """A command line option type consisting of 3 comma-separated integers."""
@@ -86,7 +92,7 @@ def main(ctx, parallel):
 @click.option('--resolution', type=Tuple3(), default="1,1,1", help="Resolution of a layer in nanometers.", show_default=True)
 @click.option('--bit-depth', type=int, default=8, help="Number of bits per a pixel.", show_default=True)
 @click.option('--num-mips', type=int, default=1, help="Number of mip levels to generate at once.", show_default=True)
-@click.argument("cloudpath")
+@click.argument("cloudpath", type=CloudPath())
 def info(
     cloudpath,
     dataset_size, voxel_offset, chunk_size,
@@ -120,8 +126,8 @@ def info(
     cv.commit_info()
 
 @main.command()
-@click.argument("source")
-@click.argument("destination")
+@click.argument("source", type=CloudPath())
+@click.argument("destination", type=CloudPath())
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
 @click.option('--step', type=int, default=44395, help="Stage step size; default Blade2 step; Blade1 42795", show_default=True)
 @click.pass_context
