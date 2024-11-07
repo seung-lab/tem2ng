@@ -88,10 +88,10 @@ def main(ctx, parallel):
 @main.command()
 @click.option('--dataset-size', type=Tuple3(), default=None, required=True, help="Dimensions of the dataset in voxels.")
 @click.option('--voxel-offset', type=Tuple3(), default="0,0,0", help="Dimensions of the dataset in voxels.")
-@click.option('--chunk-size', type=Tuple3(), default="1024,1024,1", help="Chunk size of new layers.", show_default=True)
+@click.option('--chunk-size', type=Tuple3(), default="3000,3000,1", help="Chunk size of new layers.", show_default=True)
 @click.option('--resolution', type=Tuple3(), default="1,1,1", help="Resolution of a layer in nanometers.", show_default=True)
 @click.option('--bit-depth', type=int, default=8, help="Number of bits per a pixel.", show_default=True)
-@click.option('--num-mips', type=int, default=1, help="Number of mip levels to generate at once.", show_default=True)
+@click.option('--num-mips', type=int, default=3, help="Number of mip levels to generate at once.", show_default=True)
 @click.argument("cloudpath", type=CloudPath())
 def info(
     cloudpath,
@@ -121,8 +121,13 @@ def info(
     )
     cv = CloudVolume(cloudpath, info=info)
 
+    chunk_size = np.asarray(chunk_size)
+
     for mip in range(1, num_mips):
-        cv.add_scale([2 ** mip, 2 ** mip, 1])
+        new_chunk_size = chunk_size // (2 ** mip)
+        new_chunk_size[2] = 1
+        new_chunk_size = new_chunk_size.astype(int)
+        cv.add_scale([2 ** mip, 2 ** mip, 1], chunk_size=new_chunk_size)
 
     cv.commit_info()
 
@@ -138,6 +143,9 @@ def upload(ctx, source, destination, z, step):
     cloud storage.
     """
     vol = CloudVolume(destination)
+
+    source = source.replace("file://", "")
+
     progress_dir = mkdir(os.path.join(source, 'progress'))
 
     subtiles_dir = os.path.join(source, 'subtiles')
@@ -167,7 +175,18 @@ def upload(ctx, source, destination, z, step):
         stages = stage_csv[int(filename.split("_")[1])]
 
         bbx = Bbox.from_filename(get_ng(filename, stages[0]-west_most, stages[1]-south_most, z=z, step=step))
+        
+        num_mips = len(vol.meta.available_mips)
         vol[bbx] = img
+
+        if num_mips > 1:
+            mips = tinybrain.downsample_with_averaging(img, factor=(2,2,1), num_mips=(num_mips - 1), sparse=False)
+            minpt = bbx.minpt.clone()
+            for mip_i, mip_img in enumerate(mips):
+                minpt //= 2
+                minpt[2] = bbx.minpt[2]
+                vol.image.upload(mip_img, minpt, mip_i + 1)
+
         touch(os.path.join(progress_dir, filename))
         return 1
 
