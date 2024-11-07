@@ -84,7 +84,7 @@ def main(ctx, parallel):
 @click.option('--voxel-offset', type=Tuple3(), default="0,0,0", help="Dimensions of the dataset in voxels.")
 @click.option('--chunk-size', type=Tuple3(), default="1024,1024,1", help="Chunk size of new layers.", show_default=True)
 @click.option('--resolution', type=Tuple3(), default="1,1,1", help="Resolution of a layer in nanometers.", show_default=True)
-@click.option('--bit-depth', type=int, default=8, help="Resolution of a layer in nanometers.", show_default=True)
+@click.option('--bit-depth', type=int, default=8, help="Number of bits per a pixel.", show_default=True)
 @click.option('--num-mips', type=int, default=1, help="Number of mip levels to generate at once.", show_default=True)
 @click.argument("cloudpath")
 def info(
