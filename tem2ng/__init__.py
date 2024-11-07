@@ -15,22 +15,40 @@ from cloudvolume.lib import mkdir, touch
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
-def get_ng(tilename, z=0):
+# x_step = 42320; y_step = 42309 # x, y for larger overlap
+# blade2 step: step = 44395
+# blade1 step: step = 42795
+
+def get_ng(tilename, x, y, z, step):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
 
-    col_height = 23 if t1 >= 288 else 24
-
     x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
-    get_x = lambda t1,t2: 6000 * ((t1//col_height)*3 + x_map[t2])
+    get_x = lambda t2: 6000 * (round(x / step)*3 + x_map[t2])
     y_map = {6:0,5:1,4:2,7:0,0:1,3:2,8:0,1:1,2:2}
-    get_y = lambda t1,t2: 6000 * ((col_height-1-t1%col_height)*3 + y_map[t2])
+    get_y = lambda t2: 6000 * ((35 - round(y / step))*3 + y_map[t2])
 
-    x0 = get_x(t1, t2)
+    x0 = get_x(t2)
     xf = x0 + 6000
-    y0 = get_y(t1,t2)
+    y0 = get_y(t2)
     yf = y0 + 6000
 
     return f"{x0}-{xf}_{y0}-{yf}_{z}-{z+1}"
+
+def read_stage(path):
+    with open(path) as f:
+        lines = f.readlines()
+    return float(lines[10].split(" = ")[1]), float(lines[11].split(" = ")[1])
+
+def read_stage_csv(source):
+    filepath = os.path.join(source, "metadata/stage_positions.csv")
+    stage_csv = []
+    with open(filepath) as f:
+        reader = csv.reader(f, delimiter=',')
+        next(reader)
+        for row in reader:
+            stage_csv.append([float(row[1]),float(row[2])])
+    return stage_csv
+
 
 class Tuple3(click.ParamType):
   """A command line option type consisting of 3 comma-separated integers."""
@@ -104,8 +122,9 @@ def info(
 @click.argument("source")
 @click.argument("destination")
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
+@click.option('--step', type=int, default=44395, help="Stage step size; default Blade2 step; Blade1 42795", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, z):
+def upload(ctx, source, destination, z, step):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -113,12 +132,18 @@ def upload(ctx, source, destination, z):
     vol = CloudVolume(destination)
     progress_dir = mkdir(os.path.join(source, 'progress'))
 
+    subtiles_dir = os.path.join(source, 'subtiles')
+    
+    stage_csv = read_stage_csv(source)
+    south_most = min([i[1] for i in stage_csv]) - (step * 4)
+    west_most = min([i[0] for i in stage_csv]) - (step * 4)
+
     done_files = set(os.listdir(progress_dir))
-    all_files = os.listdir(source)
+    all_files = os.listdir(subtiles_dir)
     all_files = set([
         fname for fname in all_files
         if (
-            os.path.isfile(os.path.join(source, fname))
+            os.path.isfile(os.path.join(subtiles_dir, fname))
             and os.path.splitext(fname)[1] == ".bmp"
         )
     ])
@@ -126,12 +151,14 @@ def upload(ctx, source, destination, z):
     to_upload.sort()
 
     def process(filename):
-        img = cv2.imread(os.path.join(source, filename), cv2.IMREAD_GRAYSCALE)
+        img = cv2.imread(os.path.join(subtiles_dir, filename), cv2.IMREAD_GRAYSCALE)
         img = cv2.transpose(img)
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
-        bbx = Bbox.from_filename(get_ng(filename, z=z))
+        stages = stage_csv[int(filename.split("_")[1])]
+
+        bbx = Bbox.from_filename(get_ng(filename, stages[0]-west_most, stages[1]-south_most, z=z, step=step))
         vol[bbx] = img
         touch(os.path.join(progress_dir, filename))
         return 1
