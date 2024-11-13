@@ -92,11 +92,15 @@ def main(ctx, parallel):
 @click.option('--resolution', type=Tuple3(), default="1,1,1", help="Resolution of a layer in nanometers.", show_default=True)
 @click.option('--bit-depth', type=int, default=8, help="Number of bits per a pixel.", show_default=True)
 @click.option('--num-mips', type=int, default=3, help="Number of mip levels to generate at once.", show_default=True)
+@click.option('--encoding', type=str, default="raw", help="What image encoding should be used? Options: raw, png, jxl", show_default=True)
+@click.option('--jxl-effort', type=int, default=1, help="For jxl, how much effort should be spent to find the best encoding? e=1-10", show_default=True)
+@click.option('--jxl-quality', type=int, default=100, help="For jxl, what quality level to use? Range: 0-100. 100 = mathematically lossless, 90 = visually lossless", show_default=True)
 @click.argument("cloudpath", type=CloudPath())
 def info(
     cloudpath,
     dataset_size, voxel_offset, chunk_size,
-    resolution, bit_depth, num_mips
+    resolution, bit_depth, num_mips,
+    encoding, jxl_quality, jxl_effort,
 ):
     """
     Creates and uploads the neuroglancer info file.
@@ -107,11 +111,19 @@ def info(
         print("tem2ng: bit depth must be 8, 16, 32, or 64.")
         return
 
+    if encoding not in ["raw", "png", "jxl"]:
+        print(f"tem2ng: encoding {encoding} is not valid.")
+
+    encoding_level = None if encoding != "jxl" else jxl_quality
+    encoding_effort = None if encoding != "jxl" else jxl_effort
+
     info = CloudVolume.create_new_info(
         num_channels    = 1,
         layer_type      = 'image',
         data_type       = f'uint{bit_depth}',
-        encoding        = 'raw',
+        encoding        = encoding,
+        encoding_level  = encoding_level,
+        encoding_effort = encoding_effort,
         resolution      = resolution, # Voxel scaling, units are in nanometers
         voxel_offset    = voxel_offset, # x,y,z offset in voxels from the origin
         # Pick a convenient size for your underlying chunk representation

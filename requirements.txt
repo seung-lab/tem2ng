@@ -1,6 +1,6 @@
 click
 numpy
-cloud-volume
+cloud-volume[jxl,png]
 tinybrain
 opencv-python
 tqdm
