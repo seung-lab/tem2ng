@@ -2,6 +2,7 @@ import csv
 import re
 import os
 import multiprocessing as mp
+import shutil
 
 import click
 import cv2
@@ -148,8 +149,9 @@ def info(
 @click.argument("destination", type=CloudPath())
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
 @click.option('--step', type=int, default=44395, help="Stage step size; default Blade2 step; Blade1 42795", show_default=True)
+@click.option('--clear-progress', default=False, help="Delete the progress directory and upload from the beginning.", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, z, step):
+def upload(ctx, source, destination, z, step, clear_progress):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -158,7 +160,10 @@ def upload(ctx, source, destination, z, step):
 
     source = source.replace("file://", "")
 
-    progress_dir = mkdir(os.path.join(source, 'progress'))
+    progress_dir = mkdir(os.path.join(source, '.tem2ng', 'progress'))
+
+    if clear_progress:
+        shutil.rmtree(progress_dir)
 
     subtiles_dir = os.path.join(source, 'subtiles')
     
