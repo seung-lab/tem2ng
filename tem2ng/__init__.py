@@ -88,7 +88,7 @@ def main(ctx, parallel):
 
 @main.command()
 @click.option('--dataset-size', type=Tuple3(), default=None, required=True, help="Dimensions of the dataset in voxels.")
-@click.option('--voxel-offset', type=Tuple3(), default="0,0,0", help="Dimensions of the dataset in voxels.")
+@click.option('--voxel-offset', type=Tuple3(), default="0,0,0", help="Dimensions of the dataset in voxels.", show_default=True)
 @click.option('--chunk-size', type=Tuple3(), default="3000,3000,1", help="Chunk size of new layers.", show_default=True)
 @click.option('--resolution', type=Tuple3(), default="1,1,1", help="Resolution of a layer in nanometers.", show_default=True)
 @click.option('--bit-depth', type=int, default=8, help="Number of bits per a pixel.", show_default=True)
@@ -148,8 +148,8 @@ def info(
 @click.argument("source", type=CloudPath())
 @click.argument("destination", type=CloudPath())
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
-@click.option('--step', type=int, default=44395, help="Stage step size; default Blade2 step; Blade1 42795", show_default=True)
-@click.option('--clear-progress', default=False, help="Delete the progress directory and upload from the beginning.", show_default=True)
+@click.option('--step', type=int, default=BLADE2_STEP, help=f"Stage step size; Blade1 {BLADE1_STEP}; Blade2 {BLADE2_STEP}", show_default=True)
+@click.option('--clear-progress', is_flag=True, default=False, help="Delete the progress directory and upload from the beginning.", show_default=True)
 @click.pass_context
 def upload(ctx, source, destination, z, step, clear_progress):
     """
