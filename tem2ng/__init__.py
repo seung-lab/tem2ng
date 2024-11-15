@@ -173,7 +173,7 @@ def upload(ctx, source, destination, z, step, clear_progress):
     south_most = min([i[1] for i in stage_csv]) - (step * 4)
     west_most = min([i[0] for i in stage_csv]) - (step * 4)
 
-    done_files = set(os.listdir(progress_dir))
+    done_files = set(os.listdir(mkdir(progress_dir)))
     all_files = os.listdir(subtiles_dir)
     all_files = set([
         fname for fname in all_files
