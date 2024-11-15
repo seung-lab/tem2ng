@@ -19,22 +19,24 @@ import cloudfiles.paths
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
-# x_step = 42320; y_step = 42309 # x, y for larger overlap
-# blade2 step: step = 44395
-# blade1 step: step = 42795
+BLADE2_STEP = 44395
+BLADE1_STEP = 42795
 
 def get_ng(tilename, x, y, z, step):
     t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
 
+    tile_size_px = 6000
+
+    # times 3 because we need to provide space for the 3x3 cricket grid
     x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
-    get_x = lambda t2: 6000 * (round(x / step)*3 + x_map[t2])
+    get_x = lambda t2: tile_size_px * (3 * round(x / step) + x_map[t2])
     y_map = {6:0,5:1,4:2,7:0,0:1,3:2,8:0,1:1,2:2}
-    get_y = lambda t2: 6000 * ((35 - round(y / step))*3 + y_map[t2])
+    get_y = lambda t2: tile_size_px * (3 * (35 - round(y / step)) + y_map[t2])
 
     x0 = get_x(t2)
-    xf = x0 + 6000
+    xf = x0 + tile_size_px
     y0 = get_y(t2)
-    yf = y0 + 6000
+    yf = y0 + tile_size_px
 
     return f"{x0}-{xf}_{y0}-{yf}_{z}-{z+1}"
 
