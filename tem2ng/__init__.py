@@ -1,4 +1,7 @@
+from typing import List, Dict, Union, Tuple
+
 import csv
+import io
 import re
 import os
 import multiprocessing as mp
@@ -16,44 +19,93 @@ from cloudvolume.exceptions import InfoUnavailableError
 from cloudvolume.lib import mkdir, touch
 
 import cloudfiles.paths
+from cloudfiles import CloudFile
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
-BLADE2_STEP = 44395
-BLADE1_STEP = 42795
+def decode_tilename(tilename) -> List[int]:
+    return [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
 
-def get_ng(tilename, x, y, z, step):
-    t1, t2 = [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
+def read_stage_csv(source) -> List[Dict[str,Union[int,float]]]:
+    """
+    Example data:
+    tile_id, stage_x_nm, stage_y_nm, x_relroi_nm, y_relroi_nm
+    0, 338700.639, 109345.286, 329885.172, 109961.724
+    1, 283719.777, 109345.286, 274904.310, 109961.724
+    """
+    source = cloudfiles.paths.normalize(source)
+    cf = CloudFile(source)
+    filepath = cf.join(source, "metadata/stage_positions.csv")
+    cf = CloudFile(filepath)
+    stage_data = io.StringIO(cf.get().decode("utf8"))
 
-    tile_size_px = 6000
-
-    # times 3 because we need to provide space for the 3x3 cricket grid
-    x_map = {6:0,7:1,8:2,5:0,0:1,1:2,4:0,3:1,2:2}
-    get_x = lambda t2: tile_size_px * (3 * round(x / step) + x_map[t2])
-    y_map = {6:0,5:1,4:2,7:0,0:1,3:2,8:0,1:1,2:2}
-    get_y = lambda t2: tile_size_px * (3 * (35 - round(y / step)) + y_map[t2])
-
-    x0 = get_x(t2)
-    xf = x0 + tile_size_px
-    y0 = get_y(t2)
-    yf = y0 + tile_size_px
-
-    return f"{x0}-{xf}_{y0}-{yf}_{z}-{z+1}"
-
-def read_stage(path):
-    with open(path) as f:
-        lines = f.readlines()
-    return float(lines[10].split(" = ")[1]), float(lines[11].split(" = ")[1])
-
-def read_stage_csv(source):
-    filepath = os.path.join(source, "metadata/stage_positions.csv")
     stage_csv = []
-    with open(filepath) as f:
-        reader = csv.reader(f, delimiter=',')
-        next(reader)
-        for row in reader:
-            stage_csv.append([float(row[1]),float(row[2])])
+    for row in csv.DictReader(stage_data):
+        tile_id = int(row["tile_id"])
+        row = { 
+            k.strip():float(v.strip())
+            for k,v in row.items() 
+        }
+        row["tile_id"] = tile_id
+        stage_csv.append(row)
+    
     return stage_csv
+
+def compute_supertile_map(stage_csv:List[Dict[str,Union[int,float]]]) -> np.ndarray:
+    # Determine the dimensions of the 2D array
+    rank_x = np.unique([ row["stage_x_nm"] for row in stage_csv ])
+    rank_y = np.unique([ row["stage_y_nm"] for row in stage_csv ])
+
+    rank_x = { v:i for i,v in enumerate(rank_x) }
+    rank_y = { v:i for i,v in enumerate(rank_y) }    
+    
+    arr = np.full((len(rank_y)+1, len(rank_x)+1), None)
+
+    for row in stage_csv:
+        arr[rank_y[row["stage_y_nm"]], rank_x[row["stage_x_nm"]]] = row["tile_id"]
+    
+    # Reverse the order of the rows in the array
+    supertile_map = arr[::-1]
+    
+    return supertile_map
+
+def compute_tile_id_map(
+    stage_csv:List[Dict[str,Union[int,float]]]
+) -> Dict[str, Tuple[int,int]]:
+
+    supertile_map = compute_supertile_map(stage_csv)
+
+    # Cricket subtile order
+    # SUBTILE_MAP = [
+    #     [6, 7, 8], 
+    #     [5, 0, 1], 
+    #     [4, 3, 2]
+    # ]
+
+    xmap = { 
+        6:0, 7:1, 8:2,
+        5:0, 0:1, 1:2,
+        4:0, 3:1, 2:2,
+    }
+
+    ymap = {
+        6:0, 7:0, 8:0,
+        5:1, 0:1, 1:1,
+        4:2, 3:2, 2:2,
+    }
+
+    tile_id_map = {}
+    for i, supertile_row in enumerate(supertile_map):
+        for j, supertile in enumerate(supertile_row):
+            if supertile is None:
+                continue
+            for subtile in range(9):
+                x = (j * 3) + xmap[subtile]
+                y = (i * 3) + ymap[subtile]
+                tilename = f"tile_{supertile:04}_{subtile}.bmp"
+                tile_id_map[tilename] = (x,y)
+
+    return tile_id_map
 
 class CloudPath(click.ParamType):
   name = "CloudPath"
@@ -150,10 +202,9 @@ def info(
 @click.argument("source", type=CloudPath())
 @click.argument("destination", type=CloudPath())
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
-@click.option('--step', type=int, default=BLADE2_STEP, help=f"Stage step size; Blade1 {BLADE1_STEP}; Blade2 {BLADE2_STEP}", show_default=True)
 @click.option('--clear-progress', is_flag=True, default=False, help="Delete the progress directory and upload from the beginning.", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, z, step, clear_progress):
+def upload(ctx, source, destination, z, clear_progress):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -170,8 +221,7 @@ def upload(ctx, source, destination, z, step, clear_progress):
     subtiles_dir = os.path.join(source, 'subtiles')
     
     stage_csv = read_stage_csv(source)
-    south_most = min([i[1] for i in stage_csv]) - (step * 4)
-    west_most = min([i[0] for i in stage_csv]) - (step * 4)
+    tile_id_map = compute_tile_id_map(stage_csv)
 
     done_files = set(os.listdir(mkdir(progress_dir)))
     all_files = os.listdir(subtiles_dir)
@@ -184,16 +234,32 @@ def upload(ctx, source, destination, z, step, clear_progress):
     ])
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
-
+    
     def process(filename):
+        nonlocal tile_id_map
         img = cv2.imread(os.path.join(subtiles_dir, filename), cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            print(f"{filename} could not be opened.")
+            return 0
+
         img = cv2.transpose(img)
+
         while img.ndim < 4:
             img = img[..., np.newaxis]
 
-        stages = stage_csv[int(filename.split("_")[1])]
+        # tile_id, subtile_id = decode_tilename(filename)
+        (x,y) = tile_id_map[filename]
 
-        bbx = Bbox.from_filename(get_ng(filename, stages[0]-west_most, stages[1]-south_most, z=z, step=step))
+        # padding on the top and left
+        x += 1
+        y += 1
+
+        # get_ng(filename, stages[0]-west_most, stages[1]-south_most, z=z, step=step)
+        bbx = Bbox((x,y,z), (x+1,y+1,z+1), dtype=int)
+        bbx.minpt.x *= img.shape[0]
+        bbx.maxpt.x *= img.shape[0]
+        bbx.minpt.y *= img.shape[1]
+        bbx.maxpt.y *= img.shape[1]
         
         num_mips = len(vol.meta.available_mips)
         vol[bbx] = img
