@@ -101,7 +101,7 @@ def compute_tile_id_map(
                 continue
             for subtile in range(9):
                 x = (j * 3) + xmap[subtile]
-                y = (i * 3) + ymap[subtile]
+                y = ((i-1) * 3) + ymap[subtile] # first row is None
                 tilename = f"tile_{supertile:04}_{subtile}.bmp"
                 tile_id_map[tilename] = (x,y)
 
