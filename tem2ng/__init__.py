@@ -23,6 +23,17 @@ from cloudfiles import CloudFile
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
+class IntTuple(click.ParamType):
+  """A command line option type consisting of 3 comma-separated integers."""
+  name = 'tuple'
+  def convert(self, value, param, ctx):
+    if isinstance(value, str):
+      try:
+        value = tuple(map(int, value.split(',')))
+      except ValueError:
+        self.fail(f"'{value}' does not contain a comma delimited list of integers.")
+    return value
+
 def decode_tilename(tilename) -> List[int]:
     return [ int(_) for _ in re.search(TILE_REGEXP, tilename).groups() ]
 
@@ -285,3 +296,64 @@ def upload(ctx, source, destination, z, clear_progress):
             with pathos.pools.ProcessPool(parallel) as pool:
                 for num_inserted in pool.imap(process, to_upload):
                     pbar.update(num_inserted)
+
+@main.command()
+@click.argument("source", type=CloudPath())
+@click.argument("destination", type=CloudPath())
+@click.option('--resolution', type=IntTuple(), default='1,1,1', help="Set resolution of image.", show_default=True)
+@click.pass_context
+def xray(ctx, source, destination, resolution):
+    """
+    Process axial views of a microCT directory and upload to
+    cloud storage.
+    """
+    source = source.replace("file://", "")
+
+    subtiles_dir = os.path.join(source, 'axial')
+    
+    all_files = os.listdir(subtiles_dir)
+    all_files = [
+        fname for fname in all_files
+        if (
+            os.path.isfile(os.path.join(subtiles_dir, fname))
+            and os.path.splitext(fname)[1] == ".tif"
+        )
+    ]
+    all_files.sort()
+
+    one_img = cv2.imread(os.path.join(subtiles_dir, all_files[0]))
+
+    volume_size = [
+        one_img.shape[1],
+        one_img.shape[0],
+        len(all_files),
+    ]
+
+    full_img = np.zeros(list(volume_size) + [1], dtype=np.uint8, order="F")
+
+    for z, filename in enumerate(all_files):
+        img = cv2.imread(os.path.join(subtiles_dir, filename), cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            print(f"{filename} could not be opened.")
+            return 0
+
+        img = cv2.transpose(img)
+
+        while img.ndim < 4:
+            img = img[..., np.newaxis]
+
+        full_img[:,:,z:z+1] = img
+
+
+    CloudVolume.from_numpy(
+        full_img, 
+        vol_path=destination,
+        resolution=resolution, voxel_offset=(0,0,0), 
+        chunk_size=(128,128,64), layer_type='image', max_mip=0,
+        encoding='jxl', compress=None, progress=True,
+        encoding_level=100, encoding_effort=1,
+    )
+
+
+
+
