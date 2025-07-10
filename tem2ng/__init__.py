@@ -7,6 +7,10 @@ import os
 import multiprocessing as mp
 import shutil
 
+# Don't fork, spawn entirely new processes. This
+# avoids accidental deadlocks.
+mp.set_start_method("spawn", force=True)
+
 import click
 import cv2
 import numpy as np
