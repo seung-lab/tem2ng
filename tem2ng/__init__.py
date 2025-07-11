@@ -214,6 +214,15 @@ def info(
     cv.commit_info()
 
 @main.command()
+@click.argument("path", type=CloudPath())
+@click.pass_context
+def reset(ctx, path):
+    """Reset progress directory."""
+    path = path.replace("file://", "")
+    progress_dir = mkdir(os.path.join(path, '.tem2ng', 'progress'))
+    shutil.rmtree(progress_dir)
+
+@main.command()
 @click.argument("source", type=CloudPath())
 @click.argument("destination", type=CloudPath())
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
