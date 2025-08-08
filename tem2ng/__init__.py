@@ -307,7 +307,7 @@ def upload(ctx, source, destination, z, clear_progress):
 @main.command()
 @click.argument("source", type=CloudPath())
 @click.argument("destination", type=CloudPath())
-@click.option('--resolution', type=IntTuple(), default='1,1,1', help="Set resolution of image.", show_default=True)
+@click.option('--resolution', type=IntTuple(), default='1,1,1', help="Set resolution of image (nm).", show_default=True)
 @click.pass_context
 def xray(ctx, source, destination, resolution):
     """
@@ -316,7 +316,7 @@ def xray(ctx, source, destination, resolution):
     """
     source = source.replace("file://", "")
 
-    subtiles_dir = os.path.join(source, 'axial')
+    subtiles_dir = source
     
     all_files = os.listdir(subtiles_dir)
     all_files = [
