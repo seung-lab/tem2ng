@@ -323,7 +323,8 @@ def xray(ctx, source, destination, resolution):
         fname for fname in all_files
         if (
             os.path.isfile(os.path.join(subtiles_dir, fname))
-            and os.path.splitext(fname)[1] == ".tif"
+            and (os.path.splitext(fname)[1] == ".tif" or
+            os.path.splitext(fname)[1] == ".tiff")
         )
     ]
     all_files.sort()
