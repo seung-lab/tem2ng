@@ -227,8 +227,9 @@ def reset(ctx, path):
 @click.argument("destination", type=CloudPath())
 @click.option('--z', type=int, default=0, help="Z coordinate to upload this section to.", show_default=True)
 @click.option('--clear-progress', is_flag=True, default=False, help="Delete the progress directory and upload from the beginning.", show_default=True)
+@click.option('--num-mips', type=int, default=None, help="Limit number of mips to generate (e.g. if Igneous downsample was run before and changed the info file).", show_default=True)
 @click.pass_context
-def upload(ctx, source, destination, z, clear_progress):
+def upload(ctx, source, destination, z, clear_progress, num_mips):
     """
     Process a subtile directory and upload to
     cloud storage.
@@ -285,7 +286,9 @@ def upload(ctx, source, destination, z, clear_progress):
         bbx.minpt.y *= img.shape[1]
         bbx.maxpt.y *= img.shape[1]
         
-        num_mips = len(vol.meta.available_mips)
+        if num_mips is None:
+            num_mips = len(vol.meta.available_mips)
+            
         vol[bbx] = img
 
         if num_mips > 1:
