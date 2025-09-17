@@ -13,6 +13,7 @@ mp.set_start_method("spawn", force=True)
 
 import click
 import cv2
+import imagecodecs
 import numpy as np
 import pathos.pools
 from tqdm import tqdm
@@ -117,7 +118,7 @@ def compute_tile_id_map(
             for subtile in range(9):
                 x = (j * 3) + xmap[subtile]
                 y = ((i-1) * 3) + ymap[subtile] # first row is None
-                tilename = f"tile_{supertile:04}_{subtile}.bmp"
+                tilename = f"tile_{supertile:04}_{subtile}"
                 tile_id_map[tilename] = (x,y)
 
     return tile_id_map
@@ -254,7 +255,8 @@ def upload(ctx, source, destination, z, clear_progress, num_mips):
         fname for fname in all_files
         if (
             os.path.isfile(os.path.join(subtiles_dir, fname))
-            and os.path.splitext(fname)[1] == ".bmp"
+            and (os.path.splitext(fname)[1] == ".bmp"
+            or os.path.splitext(fname)[1] == ".jxl")
         )
     ])
     to_upload = list(all_files.difference(done_files))
@@ -262,7 +264,12 @@ def upload(ctx, source, destination, z, clear_progress, num_mips):
     
     def process(filename):
         nonlocal tile_id_map
-        img = cv2.imread(os.path.join(subtiles_dir, filename), cv2.IMREAD_GRAYSCALE)
+        if os.path.splitext(filename)[1] == ".jxl":
+            with open(os.path.join(subtiles_dir, filename), "rb") as f:
+                binary = f.read()
+            img = imagecodecs.jpegxl_decode(binary)
+        else:
+            img = cv2.imread(os.path.join(subtiles_dir, filename), cv2.IMREAD_GRAYSCALE)
         if img is None:
             print(f"{filename} could not be opened.")
             return 0
@@ -273,7 +280,7 @@ def upload(ctx, source, destination, z, clear_progress, num_mips):
             img = img[..., np.newaxis]
 
         # tile_id, subtile_id = decode_tilename(filename)
-        (x,y) = tile_id_map[filename]
+        (x,y) = tile_id_map[os.path.splitext(filename)[0]]
 
         # padding on the top and left
         x += 1
@@ -316,7 +323,7 @@ def upload(ctx, source, destination, z, clear_progress, num_mips):
 @main.command()
 @click.argument("source", type=CloudPath())
 @click.argument("destination", type=CloudPath())
-@click.option('--resolution', type=IntTuple(), default='1,1,1', help="Set resolution of image.", show_default=True)
+@click.option('--resolution', type=IntTuple(), default='1,1,1', help="Set resolution of image (nm).", show_default=True)
 @click.pass_context
 def xray(ctx, source, destination, resolution):
     """
@@ -325,14 +332,15 @@ def xray(ctx, source, destination, resolution):
     """
     source = source.replace("file://", "")
 
-    subtiles_dir = os.path.join(source, 'axial')
+    subtiles_dir = source
     
     all_files = os.listdir(subtiles_dir)
     all_files = [
         fname for fname in all_files
         if (
             os.path.isfile(os.path.join(subtiles_dir, fname))
-            and os.path.splitext(fname)[1] == ".tif"
+            and (os.path.splitext(fname)[1] == ".tif" or
+            os.path.splitext(fname)[1] == ".tiff")
         )
     ]
     all_files.sort()
