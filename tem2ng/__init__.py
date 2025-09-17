@@ -266,7 +266,7 @@ def upload(ctx, source, destination, z, clear_progress):
             img = img[..., np.newaxis]
 
         # tile_id, subtile_id = decode_tilename(filename)
-        (x,y) = tile_id_map[filename.split(".")[0]]
+        (x,y) = tile_id_map[os.path.splitext(filename)[0]]
 
         # padding on the top and left
         x += 1
