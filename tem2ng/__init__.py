@@ -264,6 +264,7 @@ def upload(ctx, source, destination, z, clear_progress, num_mips):
     
     def process(filename):
         nonlocal tile_id_map
+        nonlocal num_mips
         if os.path.splitext(filename)[1] == ".jxl":
             with open(os.path.join(subtiles_dir, filename), "rb") as f:
                 binary = f.read()
