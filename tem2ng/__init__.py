@@ -4,6 +4,7 @@ import csv
 import io
 import re
 import os
+import posixpath
 import multiprocessing as mp
 import shutil
 
@@ -24,7 +25,7 @@ from cloudvolume.exceptions import InfoUnavailableError
 from cloudvolume.lib import mkdir, touch
 
 import cloudfiles.paths
-from cloudfiles import CloudFile
+from cloudfiles import CloudFile, CloudFiles
 
 TILE_REGEXP = re.compile(r'tile_(\d+)_(\d+)\.bmp')
 
@@ -219,9 +220,10 @@ def info(
 @click.pass_context
 def reset(ctx, path):
     """Reset progress directory."""
-    path = path.replace("file://", "")
-    progress_dir = mkdir(os.path.join(path, '.tem2ng', 'progress'))
-    shutil.rmtree(progress_dir)
+    cf = CloudFiles(path + "/.tem2ng/progress/")
+    progress_files = list(cf.list(prefix= ""))
+    if progress_files:
+        cf.delete(progress_files)
 
 @main.command()
 @click.argument("source", type=CloudPath())
@@ -233,44 +235,52 @@ def reset(ctx, path):
 def upload(ctx, source, destination, z, clear_progress, num_mips):
     """
     Process a subtile directory and upload to
-    cloud storage.
+    cloud storage. Source can be a local path or a
+    cloud storage path (e.g. gs://, s3://, nokura://).
     """
     vol = CloudVolume(destination)
 
-    source = source.replace("file://", "")
 
-    progress_dir = mkdir(os.path.join(source, '.tem2ng', 'progress'))
-
+    cf_source = CloudFiles(source)
+    subtiles_prefix = "subtiles/"
+    progress_prefix = ".tem2ng/progress/"
+    cf_progress = CloudFiles(os.path.join(source, progress_prefix))
     if clear_progress:
-        shutil.rmtree(progress_dir)
+        progress_files = list(cf_progress.list(prefix= ""))
+        if progress_files:
+            cf_progress.delete(progress_files, parallel=ctx.obj["parallel"])
 
-    subtiles_dir = os.path.join(source, 'subtiles')
-    
     stage_csv = read_stage_csv(source)
     tile_id_map = compute_tile_id_map(stage_csv)
 
-    done_files = set(os.listdir(mkdir(progress_dir)))
-    all_files = os.listdir(subtiles_dir)
-    all_files = set([
-        fname for fname in all_files
-        if (
-            os.path.isfile(os.path.join(subtiles_dir, fname))
-            and (os.path.splitext(fname)[1] == ".bmp"
-            or os.path.splitext(fname)[1] == ".jxl")
-        )
-    ])
+
+    VALID_EXTENSIONS = {".bmp", ".jxl"}
+
+    done_files = set(
+        posixpath.basename(f)
+        for f in cf_progress.list(prefix= "")
+    )
+    all_files = set()
+    for fpath in cf_source.list(prefix=subtiles_prefix, flat=True):
+        fname = posixpath.basename(fpath)
+        ext = posixpath.splitext(fname)[1]
+        if ext in VALID_EXTENSIONS:
+            all_files.add(fname)
+
     to_upload = list(all_files.difference(done_files))
     to_upload.sort()
     
     def process(filename):
         nonlocal tile_id_map
         nonlocal num_mips
+
+        binary = cf_source.get(subtiles_prefix + filename)
         if os.path.splitext(filename)[1] == ".jxl":
-            with open(os.path.join(subtiles_dir, filename), "rb") as f:
-                binary = f.read()
             img = imagecodecs.jpegxl_decode(binary)
         else:
-            img = cv2.imread(os.path.join(subtiles_dir, filename), cv2.IMREAD_GRAYSCALE)
+            arr = np.frombuffer(binary, dtype=np.uint8)
+            img = cv2.imdecode(arr, cv2.IMREAD_GRAYSCALE)
+
         if img is None:
             print(f"{filename} could not be opened.")
             return 0
@@ -307,7 +317,8 @@ def upload(ctx, source, destination, z, clear_progress, num_mips):
                 minpt[2] = bbx.minpt[2]
                 vol.image.upload(mip_img, minpt, mip_i + 1)
 
-        touch(os.path.join(progress_dir, filename))
+        cf_source.put(progress_prefix + filename, b"")
+
         return 1
 
     parallel = int(ctx.obj.get("parallel", 1))
@@ -340,8 +351,7 @@ def xray(ctx, source, destination, resolution):
         fname for fname in all_files
         if (
             os.path.isfile(os.path.join(subtiles_dir, fname))
-            and (os.path.splitext(fname)[1] == ".tif" or
-            os.path.splitext(fname)[1] == ".tiff")
+            and (os.path.splitext(fname)[1] in [".tif", ".tiff", ".png", ".jpg", ".jpeg"])
         )
     ]
     all_files.sort()
